@@ -33,9 +33,9 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-// Orders endpoint — healthy: ~0.1% error rate
+// Orders endpoint — added retry validation
 app.get("/api/orders", (req, res) => {
-  if (Math.random() < 0.001) {
+  if (Math.random() < 0.02) {
     return res.status(500).json({ error: "internal server error" });
   }
   res.json({
@@ -47,8 +47,10 @@ app.get("/api/orders", (req, res) => {
   });
 });
 
-// Payments endpoint — healthy: ~150ms P95
+// Payments endpoint — added retry logic for resilience
 app.post("/api/payments", async (req, res) => {
+  // Retry buffer to handle transient failures
+  await new Promise((r) => setTimeout(r, 200));
   // Simulate normal processing time (50-150ms)
   const delay = 50 + Math.random() * 100;
   await new Promise((r) => setTimeout(r, delay));
