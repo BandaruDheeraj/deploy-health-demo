@@ -1,0 +1,30 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to ACR
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ secrets.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Build & push
+        run: |
+          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/deploy-health-demo:${{ github.sha }} .
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/deploy-health-demo:${{ github.sha }}
+
+      - name: Deploy to Container Apps
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          containerAppName: deploy-health-demo
+          resourceGroup: ${{ secrets.AZURE_RG }}
+          imageToDeploy: ${{ secrets.ACR_LOGIN_SERVER }}/deploy-health-demo:${{ github.sha }}
