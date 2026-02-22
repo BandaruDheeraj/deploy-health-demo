@@ -3,9 +3,10 @@ name: Build and Deploy
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
-  build-deploy:
+  build-push:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,12 +20,18 @@ jobs:
 
       - name: Build & push
         run: |
-          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/deploy-health-demo:${{ github.sha }} .
+          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/deploy-health-demo:${{ github.sha }} \
+                        -t ${{ secrets.ACR_LOGIN_SERVER }}/deploy-health-demo:latest .
           docker push ${{ secrets.ACR_LOGIN_SERVER }}/deploy-health-demo:${{ github.sha }}
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/deploy-health-demo:latest
 
-      - name: Deploy to Container Apps
-        uses: azure/container-apps-deploy-action@v1
-        with:
-          containerAppName: deploy-health-demo
-          resourceGroup: ${{ secrets.AZURE_RG }}
-          imageToDeploy: ${{ secrets.ACR_LOGIN_SERVER }}/deploy-health-demo:${{ github.sha }}
+      - name: Summary
+        run: |
+          echo "### 🚀 Image pushed to ACR" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image:** \`${{ secrets.ACR_LOGIN_SERVER }}/deploy-health-demo:${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tag:** \`latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Deploy with:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "az containerapp update --name deploy-health-demo --resource-group rg-deploy-health-demo --image ${{ secrets.ACR_LOGIN_SERVER }}/deploy-health-demo:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
